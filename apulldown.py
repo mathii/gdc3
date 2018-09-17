@@ -3,10 +3,12 @@
 #Usage: python apulldown.py -b bamlist -s snps[.snp][.vcf][.vcf.gz] 
 
 from __future__ import division, print_function
-import argparse, gdc, pysam, random, pdb
+import gdc, argparse,  pysam, random, pdb
 from scipy.stats import binom
 
 LOG10=2.302585092994046
+
+X23={"23":"X","24":"Y"}
 
 ################################################################################
 
@@ -34,8 +36,10 @@ def parse_options():
     parser.add_argument('-i', '--mapqual', type=int, default=0, help=
                         "Minimum map quality")
     parser.add_argument('--gl', dest='gl', action='store_true')
-    parser.set_defaults(likelihoods=False)
-
+    parser.set_defaults(gl=False)
+    parser.add_argument('--x23', dest='x23', action='store_true', help=
+                        "Convert 23/24 in input files to X/Y for pulldown")
+    parser.set_defaults(x23=False)
 
     args=parser.parse_args()
     if args.output not in ["vcf", "readcounts"]:
@@ -105,8 +109,11 @@ class snplist:
             if isinstance(line, bytes):
                 line=line.decode()
 
-            while line[0]!="#CHROM":
+            while line[:6]!="#CHROM":
+                #pdb.set_trace()
                 line=next(self.data)
+                if isinstance(line, bytes):
+                    line=line.decode()
         else:
             print(file[-3:])
             raise Exception("Snp file must be .snp, .vcf or .vcf.gz format")
@@ -127,7 +134,9 @@ class snplist:
             return (bits[1], int(bits[3]), bits[0], bits[4], bits[5])
         elif self.is_vcf:
             while len(bits[3])!=1 or len(bits[4])!=1:
-                line=self.data.next()
+                line=next(self.data)
+                if isinstance(line, bytes):
+                    line=line.decode()
                 bits=line.split()
             return (bits[0], int(bits[1]), bits[2], bits[3], bits[4])
             
@@ -231,6 +240,11 @@ def main(options):
     
     for snp in snps:
         chrom,pos,id,ref,alt=snp
+
+        #If we input 23/24, convert to X, Y for pulldown
+        if options.x23 and chrom in X23:
+            chrom=X23[chrom]
+
         bases=bams.bases(chrom, pos)
         counts=[(x.count(ref),x.count(alt)) for x in bases]
         if options.method=="majority":
