@@ -208,9 +208,9 @@ def genotype_likelihoods(counts, ref_allele, alt_allele, options):
     else:
         gam=1-options.error
     
-    p00=10*binom.logpmf(alt, ref+alt, eps)/LOG10
-    p01=10*binom.logpmf(alt, ref+alt, delta)/LOG10
-    p11=10*binom.logpmf(alt, ref+alt, gam)/LOG10
+    p00=binom.logpmf(alt, ref+alt, eps)
+    p01=binom.logpmf(alt, ref+alt, delta)
+    p11=binom.logpmf(alt, ref+alt, gam)
 
     maxval=max([p00,p01,p11])
     return((p00-maxval, p01-maxval, p11-maxval))
